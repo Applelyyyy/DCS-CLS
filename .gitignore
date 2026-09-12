@@ -1,0 +1,12 @@
+# MASM / Visual Studio generated files
+*.obj
+*.exe
+*.lst
+*.ilk
+*.pdb
+*.idb
+*.tlog
+*.log
+.vs/
+Debug/
+Release/
