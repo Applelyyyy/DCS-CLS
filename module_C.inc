@@ -13,8 +13,8 @@
 ;
 ; Public procedure declarations. Implementation belongs in module_C.asm.
 
-EncryptBufferECB PROTO :PTR BYTE, :DWORD, :PTR BYTE, :PTR BYTE
-DecryptBufferECB PROTO :PTR BYTE, :DWORD, :PTR BYTE, :PTR BYTE
+EncryptBufferECB PROTO :PTR BYTE, :DWORD, :PTR BYTE, :DWORD, :PTR BYTE, :PTR DWORD
+DecryptBufferECB PROTO :PTR BYTE, :DWORD, :PTR BYTE, :DWORD, :PTR BYTE, :PTR DWORD
 EncryptDESBlock  PROTO :PTR BYTE, :PTR BYTE, :PTR BYTE
 DecryptDESBlock  PROTO :PTR BYTE, :PTR BYTE, :PTR BYTE
 ;

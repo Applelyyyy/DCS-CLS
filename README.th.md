@@ -4,8 +4,8 @@ Command-Line Shell & File Encryption Engine (Classical DES)
 
 [Read in English](README.md)
 
-โครงงาน x86 Assembly (32-bit Protected Mode, MASM) สำหรับแบ่งงานเป็น 4 โมดูล
-ตามเอกสาร `2026s1 Assembly Assignment` และใช้อัลกอริทึม DES ตาม FIPS 46-3
+โครงงาน x86 Assembly (32-bit Protected Mode, MASM) แบ่งเป็น 4 โมดูลตามเอกสาร
+`2026s1 Assembly Assignment` และใช้อัลกอริทึม DES ตาม FIPS 46-3 เพื่อการศึกษาเท่านั้น
 
 
 ## File structure
@@ -51,7 +51,7 @@ interface และไม่ได้รวม logic ของ Module A-D ไว
 ไฟล์: `module_A.inc`
 
 รับผิดชอบ REPL, FSM parser, validation และ File I/O สำหรับคำสั่ง:
-`KEYGEN`, `ENCRYPT`, `DECRYPT`, `DUMP`, `STATS`, `CLEAR`, `EXIT`
+`KEYGEN`, `ENCRYPT`, `DECRYPT`, `DUMP`, `STATS`, `CLEAR`, `HELP`, `EXIT`
 
 Procedure contracts:
 
@@ -65,6 +65,7 @@ Procedure contracts:
 | `ReadWholeFile` | เปิดและอ่านไฟล์เข้า buffer | - |
 | `WriteWholeFile` | เขียน buffer ลงไฟล์ | - |
 | `PrintShellError` | แสดง error โดย REPL ไม่ crash | - |
+| คำสั่ง `HELP` | แสดงชื่อ รูปแบบ และคำอธิบายของทุกคำสั่ง | - |
 
 ### Module B - DES Key Schedule Generator (4 คะแนน)
 
@@ -167,6 +168,18 @@ error codes และว่า procedure ใดเป็นผู้จอง/�
 build.bat
 ```
 
+## Automated tests
+
+เปิด **x86 Native Tools Command Prompt for VS** แล้วรัน:
+
+```bat
+test.bat
+```
+
+Test runner ตรวจ official DES vector, K1/K16, block encryption/decryption,
+ECB/PKCS#7 สำหรับความยาว 0-17, invalid ciphertext/padding, histogram 256 bins,
+parser, file I/O round trip และขอบเขตไฟล์ 1 MiB หากมี test ไม่ผ่านโปรแกรมจะคืน process status ที่ไม่ใช่ศูนย์
+
 คำสั่งหลักที่ script ใช้คือ:
 
 ```bat
@@ -235,7 +248,7 @@ Expected ciphertext:85E813540F0AB405
 ## Submission checklist
 
 - โปรแกรมทำงานบน Windows 10/11 และ REPL ทำงานจนถึง `EXIT`
-- รองรับครบทั้ง 7 commands และ invalid input ไม่ทำให้โปรแกรม crash
+- รองรับครบทั้ง 8 commands และ invalid input ไม่ทำให้โปรแกรม crash
 - Encryption/decryption, ECB และ PKCS#7 ถูกต้อง
 - DUMP แสดง non-printable byte เป็น `.` และ STATS มี 256 bins
 - ทดสอบ official DES vector ผ่าน

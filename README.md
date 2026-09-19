@@ -4,9 +4,7 @@ Command-Line Shell & File Encryption Engine (Classical DES)
 
 [Thai translation](README.th.md)
 
-This repository is a modular template for the 32-bit x86 MASM assembly assignment. The application consists of a command-line shell and a DES file-encryption engine based on FIPS 46-3.
-
-> This is a structure-only template. It contains variable declarations, public interfaces, and procedure shells, but no algorithmic implementation.
+This repository implements the 32-bit x86 MASM assembly assignment: a command-line shell and DES file-encryption engine based on FIPS 46-3. DES is included for coursework compatibility and must not be used for modern security systems.
 
 ## Project structure
 
@@ -47,7 +45,7 @@ Files: `module_A.inc`, `module_A.asm`
 Responsibilities:
 
 - Run the REPL until the user enters `EXIT`.
-- Parse `KEYGEN`, `ENCRYPT`, `DECRYPT`, `DUMP`, `STATS`, `CLEAR`, and `EXIT` with an FSM.
+- Parse `KEYGEN`, `ENCRYPT`, `DECRYPT`, `DUMP`, `STATS`, `CLEAR`, `HELP`, and `EXIT` with an FSM.
 - Validate command syntax, filenames, and keys.
 - Report invalid input without terminating the REPL.
 - Perform file I/O through the permitted Win32 API or Irvine32 procedures.
@@ -62,6 +60,7 @@ Responsibilities:
 | `ReadWholeFile` | Read a file into a buffer | - |
 | `WriteWholeFile` | Write a buffer to a file | - |
 | `PrintShellError` | Display a non-fatal shell error | - |
+| `HELP` command | Display command names, syntax, and descriptions | - |
 
 ## Module B - DES Key Schedule Generator (4 points)
 
@@ -184,7 +183,17 @@ link /SUBSYSTEM:CONSOLE /LIBPATH:"C:\Irvine" /OPT:NOREF /OPT:NOICF /DEBUG /NOLOG
 
 If Irvine32 procedures are used, add `Irvine32.lib`, `kernel32.lib`, and `user32.lib` to the link command as required by the local installation.
 
-The template has no executable procedure logic or main entry point, so a successful final link is not expected until implementation is added.
+The project includes executable logic for all four modules and a separate automated test runner.
+
+## Automated tests
+
+From **x86 Native Tools Command Prompt for VS**, run:
+
+```bat
+test.bat
+```
+
+The runner checks the official DES vector, K1/K16, block encryption/decryption, ECB/PKCS#7 lengths 0-17, invalid ciphertext and padding, the 256-bin histogram, parser behavior, file I/O round trips, and the 1 MiB file boundary. It returns a non-zero process status if any test fails.
 
 ## Contribution workflow
 
@@ -242,7 +251,7 @@ Expected ciphertext: 85E813540F0AB405
 ## Submission checklist
 
 - The application runs on Windows 10/11 and the REPL continues until `EXIT`.
-- All seven commands are supported and invalid input does not crash the program.
+- All eight commands are supported and invalid input does not crash the program.
 - DES encryption/decryption, ECB, and PKCS#7 padding are correct.
 - `DUMP` displays non-printable bytes as `.`.
 - `STATS` uses 256 bins and displays the top occurrences.

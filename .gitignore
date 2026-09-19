@@ -10,3 +10,6 @@
 .vs/
 Debug/
 Release/
+test_io_*.bin
+test_cipher.bin
+test_decrypted.txt
