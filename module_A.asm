@@ -26,19 +26,31 @@ HandleDecrypt      PROTO :PTR BYTE
 HandleDump         PROTO :PTR BYTE
 HandleStats        PROTO :PTR BYTE
 PathsEqualCI       PROTO :PTR BYTE,:DWORD,:PTR BYTE,:DWORD
+BuildAutoOutputPath PROTO :PTR BYTE
 
 ; ========================= MODULE A DATA BEGIN HERE ============================
 
 .data
 shellPrompt            BYTE "DES-SHELL> ", 0
-encryptSuccessMessage  BYTE "Encryption completed successfully.",0
-decryptSuccessMessage  BYTE "Decryption completed successfully.",0
+loadingText            BYTE "Loading ",0
+openParenText          BYTE " (",0
+bytesText              BYTE " bytes)...",13,10,0
+keyScheduleText        BYTE "Executing DES 16-round key generation...",13,10,0
+processingText         BYTE "Processing ",0
+blocksText             BYTE " block(s) in ECB mode...",13,10,0
+encryptSuccessMessage  BYTE "File encrypted successfully -> ",34,0
+decryptSuccessMessage  BYTE "File decrypted successfully -> ",34,0
+closingQuoteText       BYTE 34,13,10,0
+statsSizeLabel         BYTE "Total File Size: ",0
+statsSizeUnit          BYTE " Bytes",13,10,0
+extEnc                 BYTE ".enc",0
+extDec                 BYTE ".dec",0
 
 helpTextHeader  BYTE "Available commands:",13,10,0
 helpTextHelp    BYTE "  HELP",13,10,"      Show this help message.",13,10,0
 helpTextKeygen  BYTE "  KEYGEN <key>",13,10,"      Generate and display 16 DES subkeys.",13,10,0
-helpTextEncrypt BYTE "  ENCRYPT ",34,"<input-path>",34," ",34,"<output-path>",34," <key>",13,10,"      Encrypt a file using DES-ECB with PKCS#7 padding.",13,10,0
-helpTextDecrypt BYTE "  DECRYPT ",34,"<input-path>",34," ",34,"<output-path>",34," <key>",13,10,"      Decrypt a DES-ECB file and remove PKCS#7 padding.",13,10,0
+helpTextEncrypt BYTE "  ENCRYPT ",34,"<input-path>",34," [",34,"<output-path>",34,"] <key>",13,10,"      Encrypt using DES-ECB; default output is <input-path>.enc.",13,10,0
+helpTextDecrypt BYTE "  DECRYPT ",34,"<input-path>",34," [",34,"<output-path>",34,"] <key>",13,10,"      Decrypt DES-ECB; default output is <input-path>.dec.",13,10,0
 helpTextDump    BYTE "  DUMP ",34,"<input-path>",34,13,10,"      Display file bytes as hexadecimal and ASCII.",13,10,0
 helpTextStats   BYTE "  STATS ",34,"<input-path>",34,13,10,"      Display the byte-frequency histogram and top occurrences.",13,10,0
 helpTextClear   BYTE "  CLEAR",13,10,"      Clear the console.",13,10,0
@@ -89,6 +101,7 @@ moduleInputLength      DWORD ?
 moduleOutputLength     DWORD ?
 ioBytesTransferred    DWORD ?
 overflowByte           BYTE ?
+autoOutputPath         BYTE (COMMAND_BUFFER_CAPACITY + 8) DUP(?)
 
 ; ========================== MODULE A DATA END HERE =============================
 
@@ -96,6 +109,13 @@ overflowByte           BYTE ?
 
 .code
 ShellMain PROC
+    push ebp
+    mov ebp,esp
+    push ebx
+    push ecx
+    push edx
+    push esi
+    push edi
 shell_read_next:
     mov  edx, OFFSET shellPrompt
     call WriteString
@@ -141,10 +161,17 @@ shell_success:
     mov eax, STATUS_SUCCESS
 
 shell_finished:
+    pop edi
+    pop esi
+    pop edx
+    pop ecx
+    pop ebx
+    mov esp,ebp
+    pop ebp
     ret
 ShellMain ENDP
 
-ReadCommandLine PROC USES edx ecx,
+ReadCommandLine PROC USES ebx ecx edx esi edi,
                     bufferPtr:PTR BYTE,
                     capacity:DWORD,
                     lengthOut:PTR DWORD
@@ -182,10 +209,7 @@ read_invalid_parameter:
     ret
 ReadCommandLine ENDP
 
-ParseCommandFSM PROC textPtr:PTR BYTE, textLength:DWORD, commandPtr:PTR BYTE
-    push ebx
-    push esi
-    push edi
+ParseCommandFSM PROC USES ebx ecx edx esi edi,textPtr:PTR BYTE, textLength:DWORD, commandPtr:PTR BYTE
 
     mov esi, textPtr
     test esi, esi
@@ -370,14 +394,10 @@ parse_invalid_parameter:
     mov eax, ERROR_INVALID_PARAMETER
 
 parse_finished:
-    pop edi
-    pop esi
-    pop ebx
     ret
 ParseCommandFSM ENDP
 
-ValidateCommand PROC commandPtr:PTR BYTE
-    push esi
+ValidateCommand PROC USES ebx ecx edx esi edi,commandPtr:PTR BYTE
     mov esi, commandPtr
     test esi, esi
     jz validate_invalid_parameter
@@ -437,12 +457,28 @@ validate_one_path:
     jmp validate_success
 
 validate_crypto:
+    cmp ecx, 2
+    je validate_crypto_auto
     cmp ecx, 3
     jne validate_wrong_count
     cmp [esi].PARSED_COMMAND.inputPathQuoted, 1
     jne validate_path_not_quoted
     cmp [esi].PARSED_COMMAND.outputPathQuoted, 1
     jne validate_path_not_quoted
+    jmp validate_crypto_key
+
+validate_crypto_auto:
+    cmp [esi].PARSED_COMMAND.inputPathQuoted, 1
+    jne validate_path_not_quoted
+    mov edx, [esi].PARSED_COMMAND.outputPathPtr
+    mov [esi].PARSED_COMMAND.keyTextPtr, edx
+    mov edx, [esi].PARSED_COMMAND.outputPathLength
+    mov [esi].PARSED_COMMAND.keyTextLength, edx
+    INVOKE BuildAutoOutputPath, esi
+    test eax, eax
+    jnz validate_finished
+
+validate_crypto_key:
     mov eax, [esi].PARSED_COMMAND.keyTextPtr
     mov edx, [esi].PARSED_COMMAND.keyTextLength
     INVOKE IsValidHexKey, eax, edx
@@ -477,11 +513,10 @@ validate_invalid_parameter:
     mov eax, ERROR_INVALID_PARAMETER
 
 validate_finished:
-    pop esi
     ret
 ValidateCommand ENDP
 
-DispatchCommand PROC commandPtr:PTR BYTE
+DispatchCommand PROC USES ebx ecx edx esi edi,commandPtr:PTR BYTE
     mov edx, commandPtr
     test edx, edx
     jz dispatch_invalid_parameter
@@ -554,7 +589,7 @@ dispatch_invalid_parameter:
     ret
 DispatchCommand ENDP
 
-ReadWholeFile PROC pathPtr:PTR BYTE, bufferPtr:PTR BYTE, capacity:DWORD, lengthOut:PTR DWORD
+ReadWholeFile PROC USES ebx ecx edx esi edi,pathPtr:PTR BYTE, bufferPtr:PTR BYTE, capacity:DWORD, lengthOut:PTR DWORD
     push ebx
     push esi
     push edi
@@ -622,7 +657,7 @@ rwf_done:
     ret
 ReadWholeFile ENDP
 
-WriteWholeFile PROC pathPtr:PTR BYTE, bufferPtr:PTR BYTE, dataLength:DWORD
+WriteWholeFile PROC USES ebx ecx edx esi edi,pathPtr:PTR BYTE, bufferPtr:PTR BYTE, dataLength:DWORD
     push ebx
     push esi
     push edi
@@ -673,7 +708,7 @@ wwf_done:
     ret
 WriteWholeFile ENDP
 
-PrintShellError PROC errorCode:DWORD
+PrintShellError PROC USES ebx ecx edx esi edi,errorCode:DWORD
     mov eax, errorCode
     cmp eax, ERROR_EMPTY_COMMAND
     je print_empty_command
@@ -769,7 +804,7 @@ print_error_message:
     ret
 PrintShellError ENDP
 
-ResetParsedCommand PROC USES edi ecx eax, commandPtr:PTR BYTE
+ResetParsedCommand PROC USES ebx ecx edx esi edi, commandPtr:PTR BYTE
     mov edi, commandPtr
     mov ecx, SIZEOF PARSED_COMMAND
     xor eax, eax
@@ -781,7 +816,7 @@ reset_command_loop:
     ret
 ResetParsedCommand ENDP
 
-IdentifyCommand PROC tokenPtr:PTR BYTE, commandLength:DWORD
+IdentifyCommand PROC USES ebx ecx edx esi edi,tokenPtr:PTR BYTE, commandLength:DWORD
     INVOKE CompareTokenCI, tokenPtr, commandLength, ADDR keywordKeygen, LENGTHOF keywordKeygen
     cmp eax, 1
     je identify_keygen
@@ -834,7 +869,7 @@ identify_help:
     ret
 IdentifyCommand ENDP
 
-CompareTokenCI PROC USES esi edi ecx ebx,
+CompareTokenCI PROC USES ebx ecx edx esi edi,
                     tokenPtr:PTR BYTE,
                     comparisonLength:DWORD,
                     expectedPtr:PTR BYTE,
@@ -870,7 +905,7 @@ compare_not_equal:
     ret
 CompareTokenCI ENDP
 
-IsValidHexKey PROC USES esi ecx ebx, keyPtr:PTR BYTE, keyLength:DWORD
+IsValidHexKey PROC USES ebx ecx edx esi edi, keyPtr:PTR BYTE, keyLength:DWORD
     mov esi, keyPtr
     mov ecx, keyLength
     cmp ecx, 18
@@ -918,7 +953,7 @@ key_invalid:
     ret
 IsValidHexKey ENDP
 
-HexCharToNibble PROC characterValue:DWORD
+HexCharToNibble PROC USES ebx ecx edx esi edi,characterValue:DWORD
     mov eax,characterValue
     and eax,0FFh
     cmp al,'0'
@@ -950,7 +985,7 @@ hcn_bad:
     ret
 HexCharToNibble ENDP
 
-ParseHexKey64 PROC USES ebx esi edi ecx,keyPtr:PTR BYTE,keyLength:DWORD,keyOut:PTR BYTE
+ParseHexKey64 PROC USES ebx ecx edx esi edi,keyPtr:PTR BYTE,keyLength:DWORD,keyOut:PTR BYTE
     mov esi,keyPtr
     mov edi,keyOut
     test esi,esi
@@ -988,7 +1023,7 @@ phk_bad:
     ret
 ParseHexKey64 ENDP
 
-PathsEqualCI PROC USES esi edi ecx ebx,leftPtr:PTR BYTE,leftLength:DWORD,rightPtr:PTR BYTE,rightLength:DWORD
+PathsEqualCI PROC USES ebx ecx edx esi edi,leftPtr:PTR BYTE,leftLength:DWORD,rightPtr:PTR BYTE,rightLength:DWORD
     mov eax,leftLength
     cmp eax,rightLength
     jne pec_no
@@ -1026,7 +1061,53 @@ pec_no:
     ret
 PathsEqualCI ENDP
 
-HandleKeygen PROC USES esi,commandPtr:PTR BYTE
+BuildAutoOutputPath PROC USES ebx ecx edx esi edi,commandPtr:PTR BYTE
+    mov edx,commandPtr
+    test edx,edx
+    jz bao_bad
+    mov ecx,[edx].PARSED_COMMAND.inputPathLength
+    cmp ecx,COMMAND_BUFFER_CAPACITY
+    ja bao_small
+    mov esi,[edx].PARSED_COMMAND.inputPathPtr
+    test esi,esi
+    jz bao_bad
+    mov edi,OFFSET autoOutputPath
+bao_copy_path:
+    test ecx,ecx
+    jz bao_choose_extension
+    mov al,[esi]
+    mov [edi],al
+    inc esi
+    inc edi
+    dec ecx
+    jmp bao_copy_path
+bao_choose_extension:
+    mov esi,OFFSET extDec
+    cmp [edx].PARSED_COMMAND.commandType,COMMAND_ENCRYPT
+    jne bao_copy_extension
+    mov esi,OFFSET extEnc
+bao_copy_extension:
+    mov al,[esi]
+    mov [edi],al
+    inc esi
+    inc edi
+    test al,al
+    jnz bao_copy_extension
+    mov [edx].PARSED_COMMAND.outputPathPtr,OFFSET autoOutputPath
+    mov ecx,[edx].PARSED_COMMAND.inputPathLength
+    add ecx,4
+    mov [edx].PARSED_COMMAND.outputPathLength,ecx
+    xor eax,eax
+    ret
+bao_small:
+    mov eax,ERROR_BUFFER_TOO_SMALL
+    ret
+bao_bad:
+    mov eax,ERROR_INVALID_PARAMETER
+    ret
+BuildAutoOutputPath ENDP
+
+HandleKeygen PROC USES ebx ecx edx esi edi,commandPtr:PTR BYTE
     mov esi,commandPtr
     lea eax,[esi].PARSED_COMMAND.keyBytes
     INVOKE GenerateKeySchedule,eax,ADDR moduleSubkeys
@@ -1037,7 +1118,7 @@ hk_done:
     ret
 HandleKeygen ENDP
 
-HandleEncrypt PROC USES esi edi,commandPtr:PTR BYTE
+HandleEncrypt PROC USES ebx ecx edx esi edi,commandPtr:PTR BYTE
     mov esi,commandPtr
     INVOKE PathsEqualCI,[esi].PARSED_COMMAND.inputPathPtr,[esi].PARSED_COMMAND.inputPathLength,[esi].PARSED_COMMAND.outputPathPtr,[esi].PARSED_COMMAND.outputPathLength
     cmp eax,1
@@ -1045,10 +1126,30 @@ HandleEncrypt PROC USES esi edi,commandPtr:PTR BYTE
     INVOKE ReadWholeFile,[esi].PARSED_COMMAND.inputPathPtr,ADDR fileInputBuffer,FILE_BUFFER_CAPACITY,ADDR moduleInputLength
     test eax,eax
     jnz he_done
+    mov edx,OFFSET loadingText
+    call WriteString
+    mov edx,[esi].PARSED_COMMAND.inputPathPtr
+    call WriteString
+    mov edx,OFFSET openParenText
+    call WriteString
+    mov eax,moduleInputLength
+    call WriteDec
+    mov edx,OFFSET bytesText
+    call WriteString
+    mov edx,OFFSET keyScheduleText
+    call WriteString
     lea eax,[esi].PARSED_COMMAND.keyBytes
     INVOKE GenerateKeySchedule,eax,ADDR moduleSubkeys
     test eax,eax
     jnz he_done
+    mov edx,OFFSET processingText
+    call WriteString
+    mov eax,moduleInputLength
+    shr eax,3
+    inc eax
+    call WriteDec
+    mov edx,OFFSET blocksText
+    call WriteString
     INVOKE EncryptBufferECB,ADDR fileInputBuffer,moduleInputLength,ADDR fileOutputBuffer,(FILE_BUFFER_CAPACITY+8),ADDR moduleSubkeys,ADDR moduleOutputLength
     test eax,eax
     jnz he_done
@@ -1057,7 +1158,10 @@ HandleEncrypt PROC USES esi edi,commandPtr:PTR BYTE
     jnz he_done
     mov edx,OFFSET encryptSuccessMessage
     call WriteString
-    call Crlf
+    mov edx,[esi].PARSED_COMMAND.outputPathPtr
+    call WriteString
+    mov edx,OFFSET closingQuoteText
+    call WriteString
     xor eax,eax
 he_done:
     ret
@@ -1066,7 +1170,7 @@ he_same:
     ret
 HandleEncrypt ENDP
 
-HandleDecrypt PROC USES esi,commandPtr:PTR BYTE
+HandleDecrypt PROC USES ebx ecx edx esi edi,commandPtr:PTR BYTE
     mov esi,commandPtr
     INVOKE PathsEqualCI,[esi].PARSED_COMMAND.inputPathPtr,[esi].PARSED_COMMAND.inputPathLength,[esi].PARSED_COMMAND.outputPathPtr,[esi].PARSED_COMMAND.outputPathLength
     cmp eax,1
@@ -1074,10 +1178,29 @@ HandleDecrypt PROC USES esi,commandPtr:PTR BYTE
     INVOKE ReadWholeFile,[esi].PARSED_COMMAND.inputPathPtr,ADDR fileInputBuffer,(FILE_BUFFER_CAPACITY+8),ADDR moduleInputLength
     test eax,eax
     jnz hd_done
+    mov edx,OFFSET loadingText
+    call WriteString
+    mov edx,[esi].PARSED_COMMAND.inputPathPtr
+    call WriteString
+    mov edx,OFFSET openParenText
+    call WriteString
+    mov eax,moduleInputLength
+    call WriteDec
+    mov edx,OFFSET bytesText
+    call WriteString
+    mov edx,OFFSET keyScheduleText
+    call WriteString
     lea eax,[esi].PARSED_COMMAND.keyBytes
     INVOKE GenerateKeySchedule,eax,ADDR moduleSubkeys
     test eax,eax
     jnz hd_done
+    mov edx,OFFSET processingText
+    call WriteString
+    mov eax,moduleInputLength
+    shr eax,3
+    call WriteDec
+    mov edx,OFFSET blocksText
+    call WriteString
     INVOKE DecryptBufferECB,ADDR fileInputBuffer,moduleInputLength,ADDR fileOutputBuffer,(FILE_BUFFER_CAPACITY+8),ADDR moduleSubkeys,ADDR moduleOutputLength
     test eax,eax
     jnz hd_done
@@ -1086,7 +1209,10 @@ HandleDecrypt PROC USES esi,commandPtr:PTR BYTE
     jnz hd_done
     mov edx,OFFSET decryptSuccessMessage
     call WriteString
-    call Crlf
+    mov edx,[esi].PARSED_COMMAND.outputPathPtr
+    call WriteString
+    mov edx,OFFSET closingQuoteText
+    call WriteString
     xor eax,eax
 hd_done:
     ret
@@ -1095,7 +1221,7 @@ hd_same:
     ret
 HandleDecrypt ENDP
 
-HandleDump PROC USES esi,commandPtr:PTR BYTE
+HandleDump PROC USES ebx ecx edx esi edi,commandPtr:PTR BYTE
     mov esi,commandPtr
     INVOKE ReadWholeFile,[esi].PARSED_COMMAND.inputPathPtr,ADDR fileInputBuffer,(FILE_BUFFER_CAPACITY+8),ADDR moduleInputLength
     test eax,eax
@@ -1105,11 +1231,17 @@ hdu_done:
     ret
 HandleDump ENDP
 
-HandleStats PROC USES esi,commandPtr:PTR BYTE
+HandleStats PROC USES ebx ecx edx esi edi,commandPtr:PTR BYTE
     mov esi,commandPtr
     INVOKE ReadWholeFile,[esi].PARSED_COMMAND.inputPathPtr,ADDR fileInputBuffer,(FILE_BUFFER_CAPACITY+8),ADDR moduleInputLength
     test eax,eax
     jnz hs_done
+    mov edx,OFFSET statsSizeLabel
+    call WriteString
+    mov eax,moduleInputLength
+    call WriteDec
+    mov edx,OFFSET statsSizeUnit
+    call WriteString
     INVOKE ComputeBufferStats,ADDR fileInputBuffer,moduleInputLength,ADDR moduleHistogram
     test eax,eax
     jnz hs_done

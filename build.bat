@@ -1,8 +1,9 @@
 @echo off
-setlocal
+setlocal EnableExtensions EnableDelayedExpansion
 
 set "PROJECT_NAME=DES_Shell"
 set "IRVINE_DIR=C:\Irvine"
+set "VCVARS32=C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars32.bat"
 set "BUILD_EXIT=1"
 
 echo ========================================
@@ -11,9 +12,22 @@ echo ========================================
 
 where ml >nul 2>nul
 if errorlevel 1 (
-    echo ERROR: ml.exe was not found.
-    echo Run this script from x86 Native Tools Command Prompt for VS.
-    goto error
+    echo Initializing Visual Studio x86 build environment...
+    if not exist "!VCVARS32!" (
+        echo ERROR: vcvars32.bat was not found:
+        echo        !VCVARS32!
+        goto error
+    )
+    call "!VCVARS32!"
+    if errorlevel 1 (
+        echo ERROR: Visual Studio x86 environment initialization failed.
+        goto error
+    )
+    where ml >nul 2>nul
+    if errorlevel 1 (
+        echo ERROR: ml.exe was not found after running vcvars32.bat.
+        goto error
+    )
 )
 
 where link >nul 2>nul

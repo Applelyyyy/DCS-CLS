@@ -15,8 +15,9 @@
 ; Command grammar
 ; -----------------------------------------------------------------------------
 ; KEYGEN  <key>
-; ENCRYPT "<input-path>" "<output-path>" <key>
-; DECRYPT "<input-path>" "<output-path>" <key>
+; ENCRYPT "<input-path>" ["<output-path>"] <key>
+; DECRYPT "<input-path>" ["<output-path>"] <key>
+; If output-path is omitted, .enc or .dec is appended to input-path.
 ; DUMP    "<input-path>"
 ; STATS   "<input-path>"
 ; CLEAR

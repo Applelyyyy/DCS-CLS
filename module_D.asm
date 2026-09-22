@@ -17,7 +17,7 @@ asciiText BYTE "  ASCII ",0
 selectedFlags BYTE 256 DUP(?)
 
 .code
-DisplayHexDump PROC USES ebx esi edi ecx edx,bufferPtr:PTR BYTE,dataLength:DWORD
+DisplayHexDump PROC USES ebx ecx edx esi edi,bufferPtr:PTR BYTE,dataLength:DWORD
     mov esi,bufferPtr
     test esi,esi
     jz dhd_bad
@@ -100,7 +100,7 @@ dhd_bad:
     ret
 DisplayHexDump ENDP
 
-ComputeBufferStats PROC USES esi edi ecx eax,bufferPtr:PTR BYTE,dataLength:DWORD,histogramPtr:PTR DWORD
+ComputeBufferStats PROC USES ebx ecx edx esi edi,bufferPtr:PTR BYTE,dataLength:DWORD,histogramPtr:PTR DWORD
     mov esi,bufferPtr
     mov edi,histogramPtr
     test esi,esi
@@ -129,7 +129,7 @@ cbs_bad:
     ret
 ComputeBufferStats ENDP
 
-DisplayTopOccurrences PROC USES ebx esi edi ecx edx,histogramPtr:PTR DWORD,topCount:DWORD
+DisplayTopOccurrences PROC USES ebx ecx edx esi edi,histogramPtr:PTR DWORD,topCount:DWORD
     mov esi,histogramPtr
     test esi,esi
     jz dto_bad
@@ -199,7 +199,26 @@ dto_count:
     mov edx,OFFSET countText
     call WriteString
     pop eax
+    push eax
     call WriteDec
+    mov al,' '
+    call WriteChar
+    mov al,'['
+    call WriteChar
+    pop ecx
+    cmp ecx,50
+    jbe dto_bar
+    mov ecx,50
+dto_bar:
+    test ecx,ecx
+    jz dto_bar_done
+    mov al,'*'
+    call WriteChar
+    dec ecx
+    jmp dto_bar
+dto_bar_done:
+    mov al,']'
+    call WriteChar
     call Crlf
     inc ebx
     jmp dto_rank
@@ -211,7 +230,7 @@ dto_bad:
     ret
 DisplayTopOccurrences ENDP
 
-IsPrintableASCII PROC byteValue:DWORD
+IsPrintableASCII PROC USES ebx ecx edx esi edi,byteValue:DWORD
     mov eax,byteValue
     cmp eax,20h
     jb ipa_no

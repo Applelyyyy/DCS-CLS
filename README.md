@@ -20,6 +20,8 @@ DCS-CLS/
 |-- module_D.inc        # Public PROTO declarations for Module D
 |-- module_D.asm        # Module D variables and implementation
 |-- build.bat           # Assemble, link, and run the project
+|-- test.bat            # Clean-build and run automated tests
+|-- readme.txt          # Plain-text submission information
 |-- README.md           # English documentation
 |-- README.th.md        # Thai translation
 |-- LICENSE
@@ -49,6 +51,17 @@ Responsibilities:
 - Validate command syntax, filenames, and keys.
 - Report invalid input without terminating the REPL.
 - Perform file I/O through the permitted Win32 API or Irvine32 procedures.
+
+Command forms:
+
+```text
+ENCRYPT "<input-path>" <key>
+ENCRYPT "<input-path>" "<output-path>" <key>
+DECRYPT "<input-path>" <key>
+DECRYPT "<input-path>" "<output-path>" <key>
+```
+
+When output is omitted, `ENCRYPT` appends `.enc` and `DECRYPT` appends `.dec` to the input path.
 
 | Procedure | Responsibility | Uses modules |
 |---|---|---|

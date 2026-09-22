@@ -53,6 +53,17 @@ interface และไม่ได้รวม logic ของ Module A-D ไว
 รับผิดชอบ REPL, FSM parser, validation และ File I/O สำหรับคำสั่ง:
 `KEYGEN`, `ENCRYPT`, `DECRYPT`, `DUMP`, `STATS`, `CLEAR`, `HELP`, `EXIT`
 
+รูปแบบคำสั่งเข้ารหัสและถอดรหัส:
+
+```text
+ENCRYPT "<input-path>" <key>
+ENCRYPT "<input-path>" "<output-path>" <key>
+DECRYPT "<input-path>" <key>
+DECRYPT "<input-path>" "<output-path>" <key>
+```
+
+หากไม่ระบุ output โปรแกรมจะเติม `.enc` สำหรับ ENCRYPT และ `.dec` สำหรับ DECRYPT ต่อท้าย input path
+
 Procedure contracts:
 
 | Procedure | หน้าที่ | เรียกใช้ Module |

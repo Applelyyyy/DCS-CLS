@@ -22,7 +22,11 @@ INCLUDE module_D.inc       ; Public interface only
 
 .code
 main PROC
+    push ebp
+    mov ebp,esp
     INVOKE ShellMain
+    mov esp,ebp
+    pop ebp
     exit
 main ENDP
 

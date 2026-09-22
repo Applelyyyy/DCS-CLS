@@ -84,7 +84,7 @@ roundRight DWORD ?
 sboxCombined DWORD ?
 
 .code
-EncryptDESBlock PROC USES esi edi,inputPtr:PTR BYTE,outputPtr:PTR BYTE,subkeysPtr:PTR BYTE
+EncryptDESBlock PROC USES ebx ecx edx esi edi,inputPtr:PTR BYTE,outputPtr:PTR BYTE,subkeysPtr:PTR BYTE
     mov esi,inputPtr
     mov edi,outputPtr
     test esi,esi
@@ -108,7 +108,7 @@ edb_bad:
     ret
 EncryptDESBlock ENDP
 
-DecryptDESBlock PROC USES esi edi,inputPtr:PTR BYTE,outputPtr:PTR BYTE,subkeysPtr:PTR BYTE
+DecryptDESBlock PROC USES ebx ecx edx esi edi,inputPtr:PTR BYTE,outputPtr:PTR BYTE,subkeysPtr:PTR BYTE
     mov esi,inputPtr
     mov edi,outputPtr
     test esi,esi
@@ -269,11 +269,11 @@ dbe_bad:
     ret
 DecryptBufferECB ENDP
 
-ApplyInitialPermutation PROC inputPtr:PTR BYTE,blockPtr:PTR BYTE
+ApplyInitialPermutation PROC USES ebx ecx edx esi edi,inputPtr:PTR BYTE,blockPtr:PTR BYTE
     INVOKE PermuteBits,inputPtr,blockPtr,ADDR ipTable,64
     ret
 ApplyInitialPermutation ENDP
-ApplyInversePermutation PROC blockPtr:PTR BYTE,outputPtr:PTR BYTE
+ApplyInversePermutation PROC USES ebx ecx edx esi edi,blockPtr:PTR BYTE,outputPtr:PTR BYTE
     INVOKE PermuteBits,blockPtr,outputPtr,ADDR inverseIpTable,64
     ret
 ApplyInversePermutation ENDP
@@ -345,7 +345,7 @@ ff_done:
     ret
 FeistelFunction ENDP
 
-ExpandRightHalf PROC rightHalfValue:DWORD,expandedPtr:PTR BYTE
+ExpandRightHalf PROC USES ebx ecx edx esi edi,rightHalfValue:DWORD,expandedPtr:PTR BYTE
     INVOKE WriteBE32,rightHalfValue,ADDR rightBytes
     INVOKE PermuteBits,ADDR rightBytes,expandedPtr,ADDR expansionTable,48
     ret
@@ -404,7 +404,7 @@ asb_bad:
     ret
 ApplySBoxes ENDP
 
-ApplyPPermutation PROC inputValue:DWORD
+ApplyPPermutation PROC USES ebx ecx edx esi edi,inputValue:DWORD
     INVOKE WriteBE32,inputValue,ADDR pInputBytes
     INVOKE PermuteBits,ADDR pInputBytes,ADDR pOutputBytes,ADDR pTable,32
     INVOKE ReadBE32,ADDR pOutputBytes
@@ -471,7 +471,7 @@ GetFipsBitC PROC USES ebx ecx edx esi,sourcePtr:PTR BYTE,bitPosition:DWORD
     ret
 GetFipsBitC ENDP
 
-ReadBE32 PROC USES esi,sourcePtr:PTR BYTE
+ReadBE32 PROC USES ebx ecx edx esi edi,sourcePtr:PTR BYTE
     mov esi,sourcePtr
     movzx eax,BYTE PTR [esi]
     shl eax,8
@@ -483,7 +483,7 @@ ReadBE32 PROC USES esi,sourcePtr:PTR BYTE
     ret
 ReadBE32 ENDP
 
-WriteBE32 PROC USES edi,value:DWORD,destPtr:PTR BYTE
+WriteBE32 PROC USES ebx ecx edx esi edi,value:DWORD,destPtr:PTR BYTE
     mov edi,destPtr
     mov eax,value
     mov [edi+3],al

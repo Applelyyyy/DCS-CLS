@@ -24,7 +24,7 @@ keySeparator BYTE ": ",0
 keyHalves DWORD 2 DUP(?)
 
 .code
-GenerateKeySchedule PROC USES ebx esi edi, keyPtr:PTR BYTE, subkeysPtr:PTR BYTE
+GenerateKeySchedule PROC USES ebx ecx edx esi edi, keyPtr:PTR BYTE, subkeysPtr:PTR BYTE
     mov esi,keyPtr
     test esi,esi
     jz gks_bad
@@ -57,7 +57,7 @@ gks_done:
     ret
 GenerateKeySchedule ENDP
 
-DisplayKeySchedule PROC USES ebx esi ecx edx, subkeysPtr:PTR BYTE
+DisplayKeySchedule PROC USES ebx ecx edx esi edi, subkeysPtr:PTR BYTE
     mov esi,subkeysPtr
     test esi,esi
     jz dks_bad
@@ -103,7 +103,7 @@ dks_bad:
     ret
 DisplayKeySchedule ENDP
 
-ApplyPC1 PROC USES ebx esi edi ecx edx, keyPtr:PTR BYTE, halvesPtr:PTR BYTE
+ApplyPC1 PROC USES ebx ecx edx esi edi, keyPtr:PTR BYTE, halvesPtr:PTR BYTE
     mov esi,keyPtr
     mov edi,halvesPtr
     test esi,esi
@@ -142,7 +142,7 @@ pc1_bad:
     ret
 ApplyPC1 ENDP
 
-RotateKeyHalves PROC USES ebx ecx edx esi, halvesPtr:PTR BYTE, shiftCount:DWORD
+RotateKeyHalves PROC USES ebx ecx edx esi edi, halvesPtr:PTR BYTE, shiftCount:DWORD
     mov esi,halvesPtr
     test esi,esi
     jz rkh_bad
@@ -185,7 +185,7 @@ rkh_bad:
     ret
 RotateKeyHalves ENDP
 
-ApplyPC2 PROC USES ebx esi edi ecx edx, halvesPtr:PTR BYTE, subkeyPtr:PTR BYTE
+ApplyPC2 PROC USES ebx ecx edx esi edi, halvesPtr:PTR BYTE, subkeyPtr:PTR BYTE
     mov esi,halvesPtr
     mov edi,subkeyPtr
     test esi,esi
@@ -239,7 +239,7 @@ pc2_bad:
     ret
 ApplyPC2 ENDP
 
-GetFipsBitB PROC USES ebx ecx edx esi, sourcePtr:PTR BYTE, bitPosition:DWORD
+GetFipsBitB PROC USES ebx ecx edx esi edi, sourcePtr:PTR BYTE, bitPosition:DWORD
     mov esi,sourcePtr
     mov eax,bitPosition
     dec eax

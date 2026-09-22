@@ -19,6 +19,8 @@ nameInvalidCipher BYTE "Reject invalid ciphertext lengths",0
 nameInvalidPadding BYTE "Reject invalid PKCS#7 padding",0
 nameFileIO BYTE "File write/read round trip",0
 nameMaxFile BYTE "1 MiB file boundary and overflow",0
+nameRegisters BYTE "Public register preservation and EAX return",0
+nameAutoCrypto BYTE "Automatic .enc/.dec end-to-end flow",0
 officialKey BYTE 13h,34h,57h,79h,9Bh,0BCh,0DFh,0F1h
 officialPlain BYTE 01h,23h,45h,67h,89h,0ABh,0CDh,0EFh
 officialCipher BYTE 85h,0E8h,13h,54h,0Fh,0Ah,0B4h,05h
@@ -30,6 +32,14 @@ parserBadQuote BYTE "dump ",34,"file.txt",0
 parserUnquoted BYTE "dump file.txt",0
 parserBadKey BYTE "keygen 1234",0
 parserExtra BYTE "help extra",0
+parserEncryptAuto BYTE "eNcRyPt ",34,"secret file.txt",34," 0x133457799BBCDFF1",0
+parserEncryptExplicit BYTE "ENCRYPT ",34,"in.bin",34," ",34,"out.bin",34," 133457799BBCDFF1",0
+expectedAutoEnc BYTE "secret file.txt.enc",0
+autoInputName BYTE "test_auto.bin",0
+autoEncryptedName BYTE "test_auto.bin.enc",0
+autoDecryptedName BYTE "test_auto.bin.enc.dec",0
+autoEncryptCommand BYTE "ENCRYPT ",34,"test_auto.bin",34," 133457799BBCDFF1",0
+autoDecryptCommand BYTE "DECRYPT ",34,"test_auto.bin.enc",34," 133457799BBCDFF1",0
 invalidPadPlain BYTE 1,2,3,4,5,6,7,0
 testFileName BYTE "test_io_roundtrip.bin",0
 largeFileName BYTE "test_io_large.bin",0
@@ -104,7 +114,9 @@ report_fail:
     ret
 ReportResult ENDP
 
-TestRoundTripLengths PROC USES ebx ecx esi edi
+TestRoundTripLengths PROC USES ebx ecx edx esi edi
+    push ebp
+    mov ebp,esp
     xor ecx,ecx
 init_round_source:
     cmp ecx,17
@@ -136,13 +148,19 @@ round_length_loop:
     jmp round_length_loop
 round_pass:
     xor eax,eax
+    mov esp,ebp
+    pop ebp
     ret
 round_fail:
     mov eax,1
+    mov esp,ebp
+    pop ebp
     ret
 TestRoundTripLengths ENDP
 
-TestHistogram PROC USES ebx ecx
+TestHistogram PROC USES ebx ecx edx esi edi
+    push ebp
+    mov ebp,esp
     xor ecx,ecx
 hist_init:
     cmp ecx,256
@@ -163,14 +181,23 @@ hist_check:
     inc ecx
     jmp hist_check
 hist_pass:
+    INVOKE ComputeBufferStats,0,256,ADDR histogramOutput
+    cmp eax,ERROR_INVALID_PARAMETER
+    jne hist_fail
     xor eax,eax
+    mov esp,ebp
+    pop ebp
     ret
 hist_fail:
     mov eax,1
+    mov esp,ebp
+    pop ebp
     ret
 TestHistogram ENDP
 
-TestParserMatrix PROC
+TestParserMatrix PROC USES ebx ecx edx esi edi
+    push ebp
+    mov ebp,esp
     INVOKE ParseCommandFSM,ADDR parserHelp,(LENGTHOF parserHelp-1),ADDR parserResult
     test eax,eax
     jnz tpm_fail
@@ -203,14 +230,49 @@ TestParserMatrix PROC
     INVOKE ValidateCommand,ADDR parserResult
     cmp eax,ERROR_WRONG_ARGUMENT_COUNT
     jne tpm_fail
+    INVOKE ParseCommandFSM,ADDR parserEncryptAuto,(LENGTHOF parserEncryptAuto-1),ADDR parserResult
+    test eax,eax
+    jnz tpm_fail
+    INVOKE ValidateCommand,ADDR parserResult
+    test eax,eax
+    jnz tpm_fail
+    cmp parserResult.commandType,COMMAND_ENCRYPT
+    jne tpm_fail
+    cmp parserResult.outputPathLength,(LENGTHOF expectedAutoEnc-1)
+    jne tpm_fail
+    mov esi,parserResult.outputPathPtr
+    mov edi,OFFSET expectedAutoEnc
+    mov ecx,(LENGTHOF expectedAutoEnc)
+    repe cmpsb
+    jne tpm_fail
+    cmp parserResult.hasInputPath,1
+    jne tpm_fail
+    cmp parserResult.hasOutputPath,1
+    jne tpm_fail
+    cmp parserResult.hasKey,1
+    jne tpm_fail
+    INVOKE ParseCommandFSM,ADDR parserEncryptExplicit,(LENGTHOF parserEncryptExplicit-1),ADDR parserResult
+    test eax,eax
+    jnz tpm_fail
+    INVOKE ValidateCommand,ADDR parserResult
+    test eax,eax
+    jnz tpm_fail
+    cmp parserResult.outputPathLength,7
+    jne tpm_fail
     xor eax,eax
+    mov esp,ebp
+    pop ebp
     ret
 tpm_fail:
     mov eax,1
+    mov esp,ebp
+    pop ebp
     ret
 TestParserMatrix ENDP
 
-TestInvalidCipher PROC
+TestInvalidCipher PROC USES ebx ecx edx esi edi
+    push ebp
+    mov ebp,esp
     INVOKE DecryptBufferECB,ADDR roundTripCipher,0,ADDR roundTripPlain,32,ADDR testSubkeys,ADDR roundTripPlainLength
     cmp eax,ERROR_INVALID_CIPHERTEXT_LENGTH
     jne tic_fail
@@ -218,13 +280,19 @@ TestInvalidCipher PROC
     cmp eax,ERROR_INVALID_CIPHERTEXT_LENGTH
     jne tic_fail
     xor eax,eax
+    mov esp,ebp
+    pop ebp
     ret
 tic_fail:
     mov eax,1
+    mov esp,ebp
+    pop ebp
     ret
 TestInvalidCipher ENDP
 
-TestInvalidPadding PROC
+TestInvalidPadding PROC USES ebx ecx edx esi edi
+    push ebp
+    mov ebp,esp
     INVOKE EncryptDESBlock,ADDR invalidPadPlain,ADDR roundTripCipher,ADDR testSubkeys
     test eax,eax
     jnz tip_fail
@@ -232,13 +300,19 @@ TestInvalidPadding PROC
     cmp eax,ERROR_INVALID_PADDING
     jne tip_fail
     xor eax,eax
+    mov esp,ebp
+    pop ebp
     ret
 tip_fail:
     mov eax,1
+    mov esp,ebp
+    pop ebp
     ret
 TestInvalidPadding ENDP
 
-TestFileIO PROC USES esi edi ecx
+TestFileIO PROC USES ebx ecx edx esi edi
+    push ebp
+    mov ebp,esp
     INVOKE WriteWholeFile,ADDR testFileName,ADDR roundTripSource,17
     test eax,eax
     jnz tfio_fail
@@ -256,14 +330,20 @@ TestFileIO PROC USES esi edi ecx
     cmp eax,ERROR_FILE_TOO_LARGE
     jne tfio_cleanup_fail
     xor eax,eax
+    mov esp,ebp
+    pop ebp
     ret
 tfio_cleanup_fail:
 tfio_fail:
     mov eax,1
+    mov esp,ebp
+    pop ebp
     ret
 TestFileIO ENDP
 
-TestMaxFile PROC USES ecx
+TestMaxFile PROC USES ebx ecx edx esi edi
+    push ebp
+    mov ebp,esp
     xor ecx,ecx
 tmf_fill:
     cmp ecx,(FILE_BUFFER_CAPACITY+1)
@@ -294,13 +374,104 @@ tmf_write_max:
     cmp eax,ERROR_FILE_TOO_LARGE
     jne tmf_fail
     xor eax,eax
+    mov esp,ebp
+    pop ebp
     ret
 tmf_fail:
     mov eax,1
+    mov esp,ebp
+    pop ebp
     ret
 TestMaxFile ENDP
 
+TestRegisterContract PROC USES ebx ecx edx esi edi
+    push ebp
+    mov ebp,esp
+    mov ebx,11223344h
+    mov ecx,22334455h
+    mov edx,33445566h
+    mov esi,44556677h
+    mov edi,55667788h
+    INVOKE ComputeBufferStats,ADDR histogramInput,0,ADDR histogramOutput
+    test eax,eax
+    jnz trc_fail
+    cmp ebx,11223344h
+    jne trc_fail
+    cmp ecx,22334455h
+    jne trc_fail
+    cmp edx,33445566h
+    jne trc_fail
+    cmp esi,44556677h
+    jne trc_fail
+    cmp edi,55667788h
+    jne trc_fail
+    INVOKE ComputeBufferStats,0,0,ADDR histogramOutput
+    cmp eax,ERROR_INVALID_PARAMETER
+    jne trc_fail
+    xor eax,eax
+    mov esp,ebp
+    pop ebp
+    ret
+trc_fail:
+    mov eax,1
+    mov esp,ebp
+    pop ebp
+    ret
+TestRegisterContract ENDP
+
+TestAutoCryptoFlow PROC USES ebx ecx edx esi edi
+    push ebp
+    mov ebp,esp
+    INVOKE WriteWholeFile,ADDR autoInputName,ADDR roundTripSource,17
+    test eax,eax
+    jnz tac_fail
+    INVOKE ParseCommandFSM,ADDR autoEncryptCommand,(LENGTHOF autoEncryptCommand-1),ADDR parserResult
+    test eax,eax
+    jnz tac_fail
+    INVOKE ValidateCommand,ADDR parserResult
+    test eax,eax
+    jnz tac_fail
+    INVOKE DispatchCommand,ADDR parserResult
+    test eax,eax
+    jnz tac_fail
+    INVOKE ReadWholeFile,ADDR autoEncryptedName,ADDR roundTripCipher,32,ADDR roundTripCipherLength
+    test eax,eax
+    jnz tac_fail
+    cmp roundTripCipherLength,24
+    jne tac_fail
+    INVOKE ParseCommandFSM,ADDR autoDecryptCommand,(LENGTHOF autoDecryptCommand-1),ADDR parserResult
+    test eax,eax
+    jnz tac_fail
+    INVOKE ValidateCommand,ADDR parserResult
+    test eax,eax
+    jnz tac_fail
+    INVOKE DispatchCommand,ADDR parserResult
+    test eax,eax
+    jnz tac_fail
+    INVOKE ReadWholeFile,ADDR autoDecryptedName,ADDR roundTripPlain,32,ADDR roundTripPlainLength
+    test eax,eax
+    jnz tac_fail
+    cmp roundTripPlainLength,17
+    jne tac_fail
+    lea esi,roundTripSource
+    lea edi,roundTripPlain
+    mov ecx,17
+    repe cmpsb
+    jne tac_fail
+    xor eax,eax
+    mov esp,ebp
+    pop ebp
+    ret
+tac_fail:
+    mov eax,1
+    mov esp,ebp
+    pop ebp
+    ret
+TestAutoCryptoFlow ENDP
+
 main PROC
+    push ebp
+    mov ebp,esp
     mov failureCount,0
     INVOKE GenerateKeySchedule,ADDR officialKey,ADDR testSubkeys
     INVOKE AssertBytes,ADDR testSubkeys,ADDR expectedK1,6,ADDR nameK1
@@ -323,6 +494,13 @@ main PROC
     INVOKE ReportResult,eax,ADDR nameFileIO
     call TestMaxFile
     INVOKE ReportResult,eax,ADDR nameMaxFile
-    INVOKE ExitProcess,failureCount
+    call TestRegisterContract
+    INVOKE ReportResult,eax,ADDR nameRegisters
+    call TestAutoCryptoFlow
+    INVOKE ReportResult,eax,ADDR nameAutoCrypto
+    mov eax,failureCount
+    mov esp,ebp
+    pop ebp
+    INVOKE ExitProcess,eax
 main ENDP
 END main

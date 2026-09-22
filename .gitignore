@@ -11,5 +11,8 @@
 Debug/
 Release/
 test_io_*.bin
+test_auto.bin
+test_auto.bin.enc
+test_auto.bin.enc.dec
 test_cipher.bin
 test_decrypted.txt
