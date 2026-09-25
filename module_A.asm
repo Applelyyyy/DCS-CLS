@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Module A implementation - Shell Core & FSM Command Parser
-; Owner: Nutthawat (68010321)
+; Owner: Nutthawat Charoensiriphong (68010321)
 ; =============================================================================
 
 option casemap:none

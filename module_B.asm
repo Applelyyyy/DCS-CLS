@@ -1,4 +1,8 @@
-; DES Key Schedule - FIPS positions are 1-based and MSB-first.
+; =============================================================================
+; Module B implementation - DES Key Schedule Generator
+; Owner: Warithnan Baibua (68011000)
+; =============================================================================
+; FIPS positions are 1-based and MSB-first.
 option casemap:none
 INCLUDE Irvine32.inc
 INCLUDE module_B.inc

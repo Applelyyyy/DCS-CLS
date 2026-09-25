@@ -1,4 +1,8 @@
-; DES core, ECB, and PKCS#7. Tables use FIPS 46-3 MSB-first numbering.
+; =============================================================================
+; Module C implementation - DES Feistel Core, ECB, and PKCS#7
+; Owner: Panabordee Panitchakit (68010697)
+; =============================================================================
+; Tables use FIPS 46-3 MSB-first numbering.
 .386
 .model flat, stdcall
 option casemap:none

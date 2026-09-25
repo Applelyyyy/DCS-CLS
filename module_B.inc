@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Module B - DES Key Schedule Generator
-; Owner: YOUR_NAME (YOUR_STUDENT_ID)
+; Owner: Warithnan Baibua (68011000)
 ; Reference: FIPS 46-3, Appendix 1
 ; =============================================================================
 ;

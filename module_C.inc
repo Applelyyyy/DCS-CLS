@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Module C - DES 16-Round Feistel Core Engine
-; Owner: YOUR_NAME (YOUR_STUDENT_ID)
+; Owner: Panabordee Panitchakit (68010697)
 ; Reference: FIPS 46-3, Data Encryption Algorithm and Appendix 1
 ; =============================================================================
 ;

@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Module D - Memory Dumper & Buffer Analytics
-; Owner: YOUR_NAME (YOUR_STUDENT_ID)
+; Owner: Punnawit Khamthorn (68010713)
 ; =============================================================================
 ;
 ; Responsibilities:

@@ -276,7 +276,7 @@ Expected ciphertext: 85E813540F0AB405
 
 | Student ID | Name | Module / responsibility |
 |---|---|---|
-| `YOUR_ID` | `YOUR_NAME` | Module A |
-| `YOUR_ID` | `YOUR_NAME` | Module B |
-| `YOUR_ID` | `YOUR_NAME` | Module C |
-| `YOUR_ID` | `YOUR_NAME` | Module D |
+| 68010321 | Nutthawat Charoensiriphong | Module A - Shell Core, FSM Parser, validation, and File I/O |
+| 68011000 | Warithnan Baibua | Module B - DES Key Schedule Generator |
+| 68010697 | Panabordee Panitchakit | Module C - DES Feistel Core, ECB, and PKCS#7 |
+| 68010713 | Punnawit Khamthorn | Module D - Hex Dump and byte-frequency statistics |

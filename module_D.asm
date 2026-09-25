@@ -1,4 +1,7 @@
-; Hex dump and byte-frequency analytics.
+; =============================================================================
+; Module D implementation - Hex Dump and Byte-Frequency Analytics
+; Owner: Punnawit Khamthorn (68010713)
+; =============================================================================
 option casemap:none
 INCLUDE Irvine32.inc
 INCLUDE module_D.inc

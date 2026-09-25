@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Module A - Shell Core & FSM Command Parser
-; Owner: YOUR_NAME (YOUR_STUDENT_ID)
+; Owner: Nutthawat Charoensiriphong (68010321)
 ; =============================================================================
 ;
 ; Responsibilities:
